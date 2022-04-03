@@ -2,6 +2,7 @@ package com.maximilian.restaurant.order.controller;
 
 import com.maximilian.restaurant.order.service.OrderService;
 import com.maximilian.restaurant.request.OrderRequest;
+import com.maximilian.restaurant.response.OrderCreatedResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,9 +38,8 @@ public class OrderRestController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> createOrder(@Valid @RequestBody OrderRequest request) {
-        orderService.createOrder(request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<OrderCreatedResponse> createOrder(@Valid @RequestBody OrderRequest request) {
+        return ResponseEntity.ok(orderService.createOrder(request));
     }
 
 }

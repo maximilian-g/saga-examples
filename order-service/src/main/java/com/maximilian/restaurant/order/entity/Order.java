@@ -2,6 +2,8 @@ package com.maximilian.restaurant.order.entity;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -28,6 +30,11 @@ public class Order {
     @Column
     @NotNull
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Enumerated(EnumType.STRING)
+    @NotNull(message = "Order state cannot be blank")
+    @Column
+    private OrderState orderState;
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private Collection<OrderItem> orderItems;
@@ -64,13 +71,22 @@ public class Order {
         this.orderItems = orderItems;
     }
 
+    public OrderState getOrderState() {
+        return orderState;
+    }
+
+    public void setOrderState(OrderState orderState) {
+        this.orderState = orderState;
+    }
+
     @Override
     public String toString() {
         return "Order{" +
                 "id=" + id +
                 ", customerId=" + customerId +
                 ", createdAt=" + createdAt +
+                ", orderState=" + orderState +
+                ", orderItems=" + orderItems +
                 '}';
     }
-
 }
