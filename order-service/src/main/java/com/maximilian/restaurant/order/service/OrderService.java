@@ -7,15 +7,16 @@ import com.maximilian.restaurant.order.entity.OrderState;
 import com.maximilian.restaurant.order.repository.ItemRepository;
 import com.maximilian.restaurant.order.repository.OrderItemRepository;
 import com.maximilian.restaurant.order.repository.OrderRepository;
-import com.maximilian.restaurant.order.service.transaction.NamedAction;
-import com.maximilian.restaurant.order.service.transaction.RevertableAction;
-import com.maximilian.restaurant.order.service.transaction.RevertableActionsService;
 import com.maximilian.restaurant.request.OrderRequest;
 import com.maximilian.restaurant.response.CustomerResponse;
 import com.maximilian.restaurant.response.OrderCreatedResponse;
 import com.maximilian.restaurant.response.OrderResponse;
 import com.maximilian.restaurant.rest.exception.GeneralException;
 import com.maximilian.restaurant.service.BaseLoggableService;
+import com.maximilian.restaurant.transaction.NamedAction;
+import com.maximilian.restaurant.transaction.RepeatableSagaStep;
+import com.maximilian.restaurant.transaction.RetryWithIntervalStrategy;
+import com.maximilian.restaurant.transaction.SagaStep;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,17 +37,17 @@ public class OrderService extends BaseLoggableService {
     private final OrderItemRepository orderItemRepository;
     private final ItemRepository itemRepository;
     private final Validator validator;
-    private final RevertableActionsService revertableActionsService;
+    private final OrderSagaService orderSagaService;
     private final CustomerClient customerClient;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, ItemRepository itemRepository, Validator validator, RevertableActionsService revertableActionsService, CustomerClient customerClient) {
+    public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, ItemRepository itemRepository, Validator validator, OrderSagaService orderSagaService, CustomerClient customerClient) {
         super(LoggerFactory.getLogger(OrderService.class));
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.itemRepository = itemRepository;
         this.validator = validator;
-        this.revertableActionsService = revertableActionsService;
+        this.orderSagaService = orderSagaService;
         this.customerClient = customerClient;
         initItems();
     }
@@ -72,75 +73,12 @@ public class OrderService extends BaseLoggableService {
         Set<ConstraintViolation<Order>> violations = getViolations(order, validator);
         if (violations.isEmpty()) {
             order = orderRepository.saveAndFlush(order);
-            revertableActionsService.performActions(getCreateOrderTransactionList(order));
+            orderSagaService.performOrderCreationTransaction(getCreateOrderTransactionList(order));
             logger.info("Saved order " + order);
             return new OrderCreatedResponse(order.getId(), order.getOrderState().toString());
         } else {
             throw new GeneralException(getErrorMessagesTotal(violations));
         }
-    }
-
-    protected List<RevertableAction> getCreateOrderTransactionList(Order order) {
-        List<RevertableAction> result = new ArrayList<>();
-
-        // 2 create ticket in kitchen in status waiting for approval
-        // 3 authorize card - action after which no rollbacks can be done - "final" action, reverts cannot be done if this completed normally
-        // 4 set ticket status to approved
-
-        // 1 check customer (and block customer for update until order is being created)
-        result.add(new RevertableAction() {
-            @Override
-            public NamedAction getNamedAction() {
-                return new NamedAction("add-customer-to-transaction-" + order.getId(), () -> {
-                    CustomerResponse customer = customerClient.getCustomerAndBlockUpdate(order.getCustomerId());
-                    logger.info("Got " + customer);
-                    if(!customer.getCanMakeOrders()) {
-                        throw new RuntimeException("Cannot create order for this customer");
-                    }
-                });
-            }
-
-            @Override
-            public NamedAction getRollbackAction() {
-                return new NamedAction("remove-customer-from-transaction-" + order.getId(), () -> {
-                    customerClient.getCustomerAndUnblockUpdate(order.getCustomerId());
-                });
-            }
-        });
-
-        // 5 update customer status so customer can be updated
-        result.add(new RevertableAction() {
-            @Override
-            public NamedAction getNamedAction() {
-                return new NamedAction("remove-customer-from-transaction-" + order.getId(), () -> {
-                    customerClient.getCustomerAndUnblockUpdate(order.getCustomerId());
-                });
-            }
-
-            @Override
-            public NamedAction getRollbackAction() {
-                return new NamedAction("remove-customer-from-transaction-" + order.getId(), () -> {
-                });
-            }
-        });
-
-        // 6 set status of order to approved
-        result.add(new RevertableAction() {
-            @Override
-            public NamedAction getNamedAction() {
-                return new NamedAction("create-order-" + order.getId(), () -> {
-                    setOrderState(order.getId(), OrderState.APPROVED);
-                });
-            }
-
-            @Override
-            public NamedAction getRollbackAction() {
-                return new NamedAction("reject-order-" + order.getId(), () -> {
-                    setOrderState(order.getId(), OrderState.REJECTED);
-                });
-            }
-        });
-        return result;
     }
 
     protected void setOrderState(Long id, OrderState state) {
@@ -164,6 +102,106 @@ public class OrderService extends BaseLoggableService {
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new GeneralException("Order with id #" + id + " not found"));
+    }
+
+    protected List<SagaStep> getCreateOrderTransactionList(Order order) {
+        List<SagaStep> result = new ArrayList<>();
+
+        // 2 create ticket in kitchen in status waiting for approval
+        // 3 authorize card - action after which no rollbacks can be done - "final" action(money are paid), reverts cannot be done if this completed normally
+        // 4 set ticket status to approved
+
+        // 0 create action was already performed, just need to add compensating action(setting status of order to rejected if transaction will be rolled back)
+        result.add(getCreateOrderSagaStep(order));
+
+        // 1 check customer (and block customer for update until order is being created)
+        result.add(getCheckCustomerSagaStep(order));
+
+        // 5 update customer status so customer can be updated
+        result.add(getUpdateCustomerSagaStep(order));
+
+        // 6 set status of order to approved
+        result.add(getApproveOrderSagaStep(order));
+        return result;
+    }
+
+    // step 0, compensating action
+    protected SagaStep getCreateOrderSagaStep(Order order) {
+        return new SagaStep() {
+            @Override
+            public NamedAction getAction() {
+                return NamedAction.getEmptyAction("empty-create-action-" + order.getId());
+            }
+
+            @Override
+            public NamedAction getCompensatingAction() {
+                return new NamedAction("set-status-to-rejected-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        setOrderState(order.getId(), OrderState.REJECTED);
+                    }
+                };
+            }
+        };
+    }
+
+    // step 1, compensating action
+    protected SagaStep getCheckCustomerSagaStep(Order order) {
+        return new SagaStep() {
+            @Override
+            public NamedAction getAction() {
+                return new NamedAction("add-customer-to-transaction-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        CustomerResponse customer = customerClient.getCustomerAndBlockUpdate(order.getCustomerId());
+                        logger.info("Got " + customer);
+                        if (!customer.getCanMakeOrders()) {
+                            throw new RuntimeException("Cannot create order for this customer");
+                        }
+                    }
+                };
+            }
+
+            @Override
+            public NamedAction getCompensatingAction() {
+                return new NamedAction("remove-customer-from-transaction-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        customerClient.getCustomerAndUnblockUpdate(order.getCustomerId());
+                    }
+                };
+            }
+        };
+    }
+
+    // step 5, repeatable action
+    protected SagaStep getUpdateCustomerSagaStep(Order order) {
+        return new RepeatableSagaStep(new RetryWithIntervalStrategy()) {
+            @Override
+            public NamedAction getAction() {
+                return new NamedAction("remove-customer-from-transaction-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        customerClient.getCustomerAndUnblockUpdate(order.getCustomerId());
+                    }
+                };
+            }
+        };
+    }
+
+    // step 6, repeatable action
+    protected SagaStep getApproveOrderSagaStep(Order order) {
+        return new RepeatableSagaStep(new RetryWithIntervalStrategy()) {
+            @Override
+            public NamedAction getAction() {
+                return new NamedAction("approve-order-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        setOrderState(order.getId(), OrderState.APPROVED);
+                    }
+                };
+            }
+        };
     }
 
 }
