@@ -1,4 +1,6 @@
-Project is created as demo implementation of some services in domain area "Restaurant".
+Project is created as demo implementation of some microservices in domain area "Restaurant".
+<br>
+Something like "Saga" pattern is implemented.(not using AMQP for now)
 
 This project was created to practice usage of
 Spring, parts of Spring Cloud, Open Feign, and microservices concept in general.
