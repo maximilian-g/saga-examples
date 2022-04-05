@@ -1,16 +1,19 @@
 package com.maximilian.restaurant.order.service;
 
 import com.maximilian.restaurant.client.CustomerClient;
+import com.maximilian.restaurant.client.KitchenClient;
 import com.maximilian.restaurant.order.entity.Item;
 import com.maximilian.restaurant.order.entity.Order;
 import com.maximilian.restaurant.order.entity.OrderState;
 import com.maximilian.restaurant.order.repository.ItemRepository;
 import com.maximilian.restaurant.order.repository.OrderItemRepository;
 import com.maximilian.restaurant.order.repository.OrderRepository;
-import com.maximilian.restaurant.request.OrderRequest;
-import com.maximilian.restaurant.response.CustomerResponse;
-import com.maximilian.restaurant.response.OrderCreatedResponse;
-import com.maximilian.restaurant.response.OrderResponse;
+import com.maximilian.restaurant.request.kitchen.KitchenOrderRequest;
+import com.maximilian.restaurant.request.order.OrderRequest;
+import com.maximilian.restaurant.response.customer.CustomerResponse;
+import com.maximilian.restaurant.response.kitchen.KitchenOrderResponse;
+import com.maximilian.restaurant.response.order.OrderCreatedResponse;
+import com.maximilian.restaurant.response.order.OrderResponse;
 import com.maximilian.restaurant.rest.exception.GeneralException;
 import com.maximilian.restaurant.service.BaseLoggableService;
 import com.maximilian.restaurant.transaction.NamedAction;
@@ -39,9 +42,10 @@ public class OrderService extends BaseLoggableService {
     private final Validator validator;
     private final OrderSagaService orderSagaService;
     private final CustomerClient customerClient;
+    private final KitchenClient kitchenClient;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, ItemRepository itemRepository, Validator validator, OrderSagaService orderSagaService, CustomerClient customerClient) {
+    public OrderService(OrderRepository orderRepository, OrderItemRepository orderItemRepository, ItemRepository itemRepository, Validator validator, OrderSagaService orderSagaService, CustomerClient customerClient, KitchenClient kitchenClient) {
         super(LoggerFactory.getLogger(OrderService.class));
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -49,6 +53,7 @@ public class OrderService extends BaseLoggableService {
         this.validator = validator;
         this.orderSagaService = orderSagaService;
         this.customerClient = customerClient;
+        this.kitchenClient = kitchenClient;
         initItems();
     }
 
@@ -73,7 +78,7 @@ public class OrderService extends BaseLoggableService {
         Set<ConstraintViolation<Order>> violations = getViolations(order, validator);
         if (violations.isEmpty()) {
             order = orderRepository.saveAndFlush(order);
-            orderSagaService.performOrderCreationTransaction(getCreateOrderTransactionList(order));
+            orderSagaService.performOrderCreationTransaction(getCreateOrderTransactionList(order, request));
             logger.info("Saved order " + order);
             return new OrderCreatedResponse(order.getId(), order.getOrderState().toString());
         } else {
@@ -104,18 +109,22 @@ public class OrderService extends BaseLoggableService {
                 .orElseThrow(() -> new GeneralException("Order with id #" + id + " not found"));
     }
 
-    protected List<SagaStep> getCreateOrderTransactionList(Order order) {
+    protected List<SagaStep> getCreateOrderTransactionList(Order order, OrderRequest request) {
         List<SagaStep> result = new ArrayList<>();
 
-        // 2 create ticket in kitchen in status waiting for approval
         // 3 authorize card - action after which no rollbacks can be done - "final" action(money are paid), reverts cannot be done if this completed normally
-        // 4 set ticket status to approved
 
         // 0 create action was already performed, just need to add compensating action(setting status of order to rejected if transaction will be rolled back)
         result.add(getCreateOrderSagaStep(order));
 
         // 1 check customer (and block customer for update until order is being created)
         result.add(getCheckCustomerSagaStep(order));
+
+        // 2 create ticket in kitchen in status waiting for approval
+        result.add(getCreateKitchenTickerSagaStep(order, request));
+
+        // 4 set ticket status to approved
+        result.add(getApproveTicketSagaStep(order));
 
         // 5 update customer status so customer can be updated
         result.add(getUpdateCustomerSagaStep(order));
@@ -168,6 +177,51 @@ public class OrderService extends BaseLoggableService {
                     @Override
                     public void run() {
                         customerClient.getCustomerAndUnblockUpdate(order.getCustomerId());
+                    }
+                };
+            }
+        };
+    }
+
+    // step 2, compensating action
+    protected SagaStep getCreateKitchenTickerSagaStep(Order order, OrderRequest request) {
+        return new SagaStep() {
+            @Override
+            public NamedAction getAction() {
+                return new NamedAction("create-ticket-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        KitchenOrderRequest req = new KitchenOrderRequest();
+                        req.setDeliveryPoint(request.getDeliveryPoint());
+                        req.setItems(request.getItems());
+                        req.setOrderId(order.getId());
+                        KitchenOrderResponse response = kitchenClient.createKitchenOrderWithItems(req);
+                        logger.info("Created " + response);
+                    }
+                };
+            }
+
+            @Override
+            public NamedAction getCompensatingAction() {
+                return new NamedAction("reject-ticket-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        kitchenClient.rejectKitchenOrderByOuterId(order.getId());
+                    }
+                };
+            }
+        };
+    }
+
+    // step 4, repeatable action
+    protected SagaStep getApproveTicketSagaStep(Order order) {
+        return new RepeatableSagaStep(new RetryWithIntervalStrategy()) {
+            @Override
+            public NamedAction getAction() {
+                return new NamedAction("approve-ticket-" + order.getId()) {
+                    @Override
+                    public void run() {
+                        kitchenClient.approveKitchenOrderByOuterId(order.getId());
                     }
                 };
             }

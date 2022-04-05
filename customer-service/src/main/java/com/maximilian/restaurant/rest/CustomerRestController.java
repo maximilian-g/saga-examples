@@ -1,8 +1,9 @@
 package com.maximilian.restaurant.rest;
 
 import com.maximilian.restaurant.entity.CustomerStatus;
-import com.maximilian.restaurant.response.CustomerRequest;
-import com.maximilian.restaurant.response.CustomerResponse;
+import com.maximilian.restaurant.request.customer.CustomerRequest;
+import com.maximilian.restaurant.request.customer.UpdateCustomerRequest;
+import com.maximilian.restaurant.response.customer.CustomerResponse;
 import com.maximilian.restaurant.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +40,12 @@ public class CustomerRestController {
     @PutMapping("/{id}/end_transaction")
     public ResponseEntity<CustomerResponse> getCustomerAndUnblockUpdate(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.changeStatus(id, CustomerStatus.READY_FOR_UPDATE).toResponse());
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CustomerResponse> disableOrderCreationPossibility(@PathVariable Long id,
+                                                                            @RequestBody @Valid UpdateCustomerRequest request) {
+        return ResponseEntity.ok(customerService.updateCustomer(id, request).toResponse());
     }
 
     @PostMapping

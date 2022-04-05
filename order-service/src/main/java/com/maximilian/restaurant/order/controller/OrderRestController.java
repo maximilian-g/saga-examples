@@ -1,8 +1,8 @@
 package com.maximilian.restaurant.order.controller;
 
 import com.maximilian.restaurant.order.service.OrderService;
-import com.maximilian.restaurant.request.OrderRequest;
-import com.maximilian.restaurant.response.OrderCreatedResponse;
+import com.maximilian.restaurant.request.order.OrderRequest;
+import com.maximilian.restaurant.response.order.OrderCreatedResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

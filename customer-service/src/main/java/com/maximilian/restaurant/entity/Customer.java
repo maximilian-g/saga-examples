@@ -1,6 +1,6 @@
 package com.maximilian.restaurant.entity;
 
-import com.maximilian.restaurant.response.CustomerResponse;
+import com.maximilian.restaurant.response.customer.CustomerResponse;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

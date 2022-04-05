@@ -1,4 +1,4 @@
-package com.maximilian.restaurant.response;
+package com.maximilian.restaurant.request.customer;
 
 import javax.validation.constraints.NotNull;
 

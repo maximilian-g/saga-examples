@@ -3,7 +3,8 @@ package com.maximilian.restaurant.service;
 import com.maximilian.restaurant.entity.Customer;
 import com.maximilian.restaurant.entity.CustomerStatus;
 import com.maximilian.restaurant.repository.CustomerRepository;
-import com.maximilian.restaurant.response.CustomerRequest;
+import com.maximilian.restaurant.request.customer.CustomerRequest;
+import com.maximilian.restaurant.request.customer.UpdateCustomerRequest;
 import com.maximilian.restaurant.rest.exception.GeneralException;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,14 +45,7 @@ public class CustomerService extends BaseLoggableService  {
         customer.setName(request.getName());
         customer.setCanMakeOrders(true);
         customer.setStatus(CustomerStatus.READY_FOR_UPDATE);
-        Set<ConstraintViolation<Customer>> violations = getViolations(customer, validator);
-        if (violations.isEmpty()) {
-            customer = customerRepository.saveAndFlush(customer);
-            logger.info("Saved customer " + customer);
-            return customer;
-        } else {
-            throw new GeneralException(getErrorMessagesTotal(violations));
-        }
+        return saveIfValid(customer);
     }
 
     public Customer getById(Long id) {
@@ -60,11 +54,35 @@ public class CustomerService extends BaseLoggableService  {
     }
 
     public Customer changeStatus(Long id, CustomerStatus status) {
-        Customer customer = customerRepository.getByIdBlocking(id)
-                .orElseThrow(() -> new GeneralException("Customer with id #" + id + " not found", HttpStatus.NOT_FOUND));
+        Customer customer = getByIdBlocking(id);
         customer.setStatus(status);
         customer = customerRepository.save(customer);
         return customer;
+    }
+
+    public Customer updateCustomer(Long id, UpdateCustomerRequest request) {
+        Customer customer = getByIdBlocking(id);
+        if(customer.getStatus() == CustomerStatus.IN_TRANSACTION) {
+            throw new GeneralException("Customer #" + id + " temporary cannot be updated");
+        }
+        customer.setCanMakeOrders(request.getCanMakeOrders());
+        return saveIfValid(customer);
+    }
+
+    protected Customer getByIdBlocking(Long id) {
+        return customerRepository.getByIdBlocking(id)
+                .orElseThrow(() -> new GeneralException("Customer with id #" + id + " not found", HttpStatus.NOT_FOUND));
+    }
+
+    protected Customer saveIfValid(Customer customer) {
+        Set<ConstraintViolation<Customer>> violations = getViolations(customer, validator);
+        if (violations.isEmpty()) {
+            customer = customerRepository.save(customer);
+            logger.info("Saved customer " + customer);
+            return customer;
+        } else {
+            throw new GeneralException(getErrorMessagesTotal(violations));
+        }
     }
 
 }

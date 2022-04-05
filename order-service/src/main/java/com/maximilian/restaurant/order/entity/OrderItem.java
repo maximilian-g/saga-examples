@@ -1,5 +1,7 @@
 package com.maximilian.restaurant.order.entity;
 
+import com.maximilian.restaurant.data.KitchenItem;
+
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
@@ -22,14 +24,14 @@ public class OrderItem {
     private Order order;
 
 
-    public static OrderItem from(com.maximilian.restaurant.data.OrderItem item, Order order) {
+    public static OrderItem from(KitchenItem item, Order order) {
         OrderItemPrimaryKey key = new OrderItemPrimaryKey();
         key.setItemId(item.getItemId());
         key.setOrderId(order.getId());
 
         OrderItem orderItem = new OrderItem();
         orderItem.setId(key);
-        orderItem.setQuantity(item.getQuantity());
+        orderItem.setQuantity((long)item.getQuantity());
         orderItem.setOrder(order);
         return orderItem;
     }

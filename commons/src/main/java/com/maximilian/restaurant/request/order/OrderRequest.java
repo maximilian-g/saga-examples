@@ -1,8 +1,8 @@
-package com.maximilian.restaurant.request;
+package com.maximilian.restaurant.request.order;
 
 import com.maximilian.restaurant.data.CardDetails;
 import com.maximilian.restaurant.data.Coordinates;
-import com.maximilian.restaurant.data.OrderItem;
+import com.maximilian.restaurant.data.KitchenItem;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
@@ -15,7 +15,7 @@ public class OrderRequest {
     private Long customerId;
     @NotNull(message = "Items must not be blank")
     @NotEmpty
-    private List<OrderItem> items;
+    private List<KitchenItem> items;
     @NotNull(message = "Delivery point must not be blank")
     @Valid
     private Coordinates deliveryPoint;
@@ -31,11 +31,11 @@ public class OrderRequest {
         this.customerId = customerId;
     }
 
-    public List<OrderItem> getItems() {
+    public List<KitchenItem> getItems() {
         return items;
     }
 
-    public void setItems(List<OrderItem> items) {
+    public void setItems(List<KitchenItem> items) {
         this.items = items;
     }
 

@@ -1,6 +1,6 @@
 package com.maximilian.restaurant.client;
 
-import com.maximilian.restaurant.response.CustomerResponse;
+import com.maximilian.restaurant.response.customer.CustomerResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
