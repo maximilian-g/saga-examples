@@ -5,8 +5,6 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -16,22 +14,18 @@ import java.util.Collection;
 
 //TODO not order, but "ticket"
 @Entity
-@Table(name = "kitchen_orders_r")
-public class KitchenOrder {
+@Table(name = "kitchen_tickets_r")
+public class KitchenTicket {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "kitchen_order_id", nullable = false, unique = true)
-    private Long id;
-
     @NotNull
-    @Column(unique = true, nullable = false)
+    @Column(name = "outer_order_id", unique = true, nullable = false)
     private Long outerOrderId;
 
     @Enumerated(EnumType.STRING)
-    @NotNull(message = "Order state cannot be blank")
+    @NotNull(message = "Ticket state cannot be blank")
     @Column
-    private KitchenOrderStatus status;
+    private KitchenTicketStatus status;
 
     // X
     @NotNull(message = "Longitude must not be blank")
@@ -43,16 +37,8 @@ public class KitchenOrder {
     @Column
     private BigDecimal latitude;
 
-    @OneToMany(mappedBy = "kitchenOrder", fetch = FetchType.LAZY)
-    private Collection<KitchenOrderItemLink> orderItems;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @OneToMany(mappedBy = "kitchenTicket", fetch = FetchType.LAZY)
+    private Collection<KitchenTicketItemLink> ticketItems;
 
     public BigDecimal getLongitude() {
         return longitude;
@@ -70,19 +56,19 @@ public class KitchenOrder {
         this.latitude = latitude;
     }
 
-    public Collection<KitchenOrderItemLink> getOrderItems() {
-        return orderItems;
+    public Collection<KitchenTicketItemLink> getTicketItems() {
+        return ticketItems;
     }
 
-    public void setOrderItems(Collection<KitchenOrderItemLink> orderItems) {
-        this.orderItems = orderItems;
+    public void setTicketItems(Collection<KitchenTicketItemLink> orderItems) {
+        this.ticketItems = orderItems;
     }
 
-    public KitchenOrderStatus getStatus() {
+    public KitchenTicketStatus getStatus() {
         return status;
     }
 
-    public void setStatus(KitchenOrderStatus status) {
+    public void setStatus(KitchenTicketStatus status) {
         this.status = status;
     }
 

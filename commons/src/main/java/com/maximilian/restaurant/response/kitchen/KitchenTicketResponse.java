@@ -5,9 +5,9 @@ import com.maximilian.restaurant.data.KitchenItemDetails;
 
 import java.util.List;
 
-public class KitchenOrderResponse {
+public class KitchenTicketResponse {
 
-    private Long kitchenOrderId;
+    private Long ticketId;
 
     private Coordinates deliveryPoint;
 
@@ -31,12 +31,12 @@ public class KitchenOrderResponse {
         this.kitchenItemDetails = kitchenItemDetails;
     }
 
-    public Long getKitchenOrderId() {
-        return kitchenOrderId;
+    public Long getTicketId() {
+        return ticketId;
     }
 
-    public void setKitchenOrderId(Long kitchenOrderId) {
-        this.kitchenOrderId = kitchenOrderId;
+    public void setTicketId(Long ticketId) {
+        this.ticketId = ticketId;
     }
 
     public String getStatus() {
@@ -50,7 +50,7 @@ public class KitchenOrderResponse {
     @Override
     public String toString() {
         return "KitchenOrderResponse{" +
-                "kitchenOrderId=" + kitchenOrderId +
+                "kitchenOrderId=" + ticketId +
                 ", deliveryPoint=" + deliveryPoint +
                 ", status='" + status + '\'' +
                 ", kitchenItemDetails=" + kitchenItemDetails +

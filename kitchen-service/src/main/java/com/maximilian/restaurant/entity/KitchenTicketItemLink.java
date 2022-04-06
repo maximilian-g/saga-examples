@@ -10,30 +10,30 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 
 @Entity
-@Table(name = "item_order_links_r")
-public class KitchenOrderItemLink {
+@Table(name = "item_ticket_links_r")
+public class KitchenTicketItemLink {
 
     @EmbeddedId
-    private KitchenOrderItemPrimaryKey id;
+    private KitchenTicketItemPrimaryKey id;
 
     @ManyToOne
     @JoinColumn(name = "kitchen_item_id", updatable = false, insertable = false)
     private KitchenItem kitchenItem;
 
     @ManyToOne
-    @JoinColumn(name = "kitchen_order_id", updatable = false, insertable = false)
-    private KitchenOrder kitchenOrder;
+    @JoinColumn(name = "outer_order_id", updatable = false, insertable = false)
+    private KitchenTicket kitchenTicket;
 
     @Column
     @NotNull
     @Positive
     private Integer quantity;
 
-    public KitchenOrderItemPrimaryKey getId() {
+    public KitchenTicketItemPrimaryKey getId() {
         return id;
     }
 
-    public void setId(KitchenOrderItemPrimaryKey id) {
+    public void setId(KitchenTicketItemPrimaryKey id) {
         this.id = id;
     }
 
@@ -45,12 +45,12 @@ public class KitchenOrderItemLink {
         this.kitchenItem = kitchenItem;
     }
 
-    public KitchenOrder getKitchenOrder() {
-        return kitchenOrder;
+    public KitchenTicket getKitchenTicket() {
+        return kitchenTicket;
     }
 
-    public void setKitchenOrder(KitchenOrder kitchenOrder) {
-        this.kitchenOrder = kitchenOrder;
+    public void setKitchenTicket(KitchenTicket kitchenTicket) {
+        this.kitchenTicket = kitchenTicket;
     }
 
     public Integer getQuantity() {

@@ -22,7 +22,7 @@ import java.util.List;
  *              So user experience become really bad.
  *       Saga has 3 types of actions:
  *          1 - Compensating actions. Actions that can be performed and compensated if error occurred.
- *          2 - Final actions. After that type of action only repeatable actions are present.
+ *          2 - Final actions. After that type of action only repeatable actions are present.(must set flag to true in SagaContext after execution)
  *          3 - Repeatable(idempotent) actions. That type of actions means that you can execute them several times and result will be same as if you executed it once.
  */
 public abstract class SagaService {
@@ -37,6 +37,7 @@ public abstract class SagaService {
         List<SagaStep> performedActions = new ArrayList<>(steps.size());
         SagaContext context = new SagaContext(logger);
         logger.info("Started transaction '" + context.getTransactionUUID().toString() + "'");
+        long start = System.currentTimeMillis();
         for(SagaStep step : steps) {
             try {
                 step.execute(context, step.getAction());
@@ -52,7 +53,7 @@ public abstract class SagaService {
                 }
             }
         }
-        logger.info("Completed transaction '" + context.getTransactionUUID().toString() + "'");
+        logger.info("Completed transaction '" + context.getTransactionUUID().toString() + "' in " + (System.currentTimeMillis() - start) + " ms");
 
     }
 

@@ -1,5 +1,7 @@
 package com.maximilian.restaurant.service;
 
+import com.maximilian.restaurant.response.order.OrderCreatedResponse;
+import com.maximilian.restaurant.rest.exception.GeneralException;
 import org.slf4j.Logger;
 
 import javax.validation.ConstraintViolation;
@@ -26,6 +28,13 @@ public abstract class BaseLoggableService {
             errorMessages.add(violation.getMessage());
         }
         return String.join(", ", errorMessages) + ".";
+    }
+
+    protected <T> void validate(T entity, Validator validator) {
+        Set<ConstraintViolation<T>> violations = getViolations(entity, validator);
+        if (!violations.isEmpty()) {
+            throw new GeneralException(getErrorMessagesTotal(violations));
+        }
     }
 
 }

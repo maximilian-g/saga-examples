@@ -8,7 +8,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
-public class KitchenOrderRequest {
+public class KitchenTicketRequest {
 
     @NotNull(message = "Items must not be blank")
     @NotEmpty

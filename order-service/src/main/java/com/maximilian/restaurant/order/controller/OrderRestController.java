@@ -2,7 +2,9 @@ package com.maximilian.restaurant.order.controller;
 
 import com.maximilian.restaurant.order.service.OrderService;
 import com.maximilian.restaurant.request.order.OrderRequest;
+import com.maximilian.restaurant.response.customer.CustomerResponse;
 import com.maximilian.restaurant.response.order.OrderCreatedResponse;
+import com.maximilian.restaurant.response.order.OrderResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.validation.Valid;
 
@@ -32,14 +36,16 @@ public class OrderRestController {
     }
 
     @GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> createOrder(@PathVariable Long id) {
+    public ResponseEntity<OrderResponse> createOrder(@PathVariable Long id) {
         logger.info("Getting order with id " + id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(orderService.getOrderResponseById(id));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<OrderCreatedResponse> createOrder(@Valid @RequestBody OrderRequest request) {
-        return ResponseEntity.ok(orderService.createOrder(request));
+        OrderCreatedResponse response = orderService.createOrder(request);
+        UriComponentsBuilder path = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}");
+        return ResponseEntity.created(path.build(response.getId())).body(response);
     }
 
 }

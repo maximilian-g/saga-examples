@@ -36,9 +36,6 @@ public class Order {
     @Column
     private OrderState orderState;
 
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
-    private Collection<OrderItem> orderItems;
-
     public Long getId() {
         return id;
     }
@@ -63,14 +60,6 @@ public class Order {
         this.customerId = customerId;
     }
 
-    public Collection<OrderItem> getOrderItems() {
-        return orderItems;
-    }
-
-    public void setOrderItems(Collection<OrderItem> orderItems) {
-        this.orderItems = orderItems;
-    }
-
     public OrderState getOrderState() {
         return orderState;
     }
@@ -86,7 +75,6 @@ public class Order {
                 ", customerId=" + customerId +
                 ", createdAt=" + createdAt +
                 ", orderState=" + orderState +
-                ", orderItems=" + orderItems +
                 '}';
     }
 }

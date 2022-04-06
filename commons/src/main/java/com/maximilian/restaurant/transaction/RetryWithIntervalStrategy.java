@@ -37,7 +37,7 @@ public class RetryWithIntervalStrategy implements RetryStrategy {
             try {
                 currentRepeatQuantity++;
                 action.run();
-                context.getLogger().info("Executed repeatable action '" + action.getName() + "-" + context.getTransactionUUID().toString() + "'");
+                context.getLogger().info("Completed repeatable action '" + action.getName() + "-" + context.getTransactionUUID().toString() + "'");
             } catch (Exception ex) {
                 sleep(intervalMs);
                 executeWithRetries(currentRepeatQuantity, context, action);

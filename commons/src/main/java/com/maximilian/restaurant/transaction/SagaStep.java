@@ -5,7 +5,11 @@ public interface SagaStep {
     default void execute(SagaContext context, NamedAction action) {
         context.getLogger().info("Executing '" + action.getName() + "-" + context.getTransactionUUID().toString() + "' action");
         action.run();
-        context.getLogger().info("Executed '" + action.getName() + "-" + context.getTransactionUUID().toString() + "' action");
+        context.getLogger().info("Completed '" + action.getName() + "-" + context.getTransactionUUID().toString() + "' action");
+    }
+
+    default void afterExecute(SagaContext context, NamedAction action) {
+
     }
 
     NamedAction getAction();

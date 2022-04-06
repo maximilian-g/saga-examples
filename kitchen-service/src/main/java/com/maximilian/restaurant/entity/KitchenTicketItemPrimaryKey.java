@@ -5,9 +5,9 @@ import javax.persistence.Embeddable;
 import java.io.Serializable;
 
 @Embeddable
-public class KitchenOrderItemPrimaryKey implements Serializable {
+public class KitchenTicketItemPrimaryKey implements Serializable {
 
-    @Column(name = "kitchen_order_id")
+    @Column(name = "outer_order_id")
     private Long orderId;
     @Column(name = "kitchen_item_id")
     private Long itemId;
@@ -36,8 +36,8 @@ public class KitchenOrderItemPrimaryKey implements Serializable {
         if (obj == null) {
             return false;
         }
-        if (obj instanceof KitchenOrderItemPrimaryKey) {
-            KitchenOrderItemPrimaryKey key = (KitchenOrderItemPrimaryKey) obj;
+        if (obj instanceof KitchenTicketItemPrimaryKey) {
+            KitchenTicketItemPrimaryKey key = (KitchenTicketItemPrimaryKey) obj;
             return key.getItemId() != null && key.getOrderId() != null &&
                     key.getItemId().equals(itemId) && key.getOrderId().equals(orderId);
         }
