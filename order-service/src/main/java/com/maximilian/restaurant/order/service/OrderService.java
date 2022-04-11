@@ -23,6 +23,7 @@ import com.maximilian.restaurant.transaction.SagaContext;
 import com.maximilian.restaurant.transaction.SagaStep;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,7 +95,7 @@ public class OrderService extends BaseLoggableService {
 
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
-                .orElseThrow(() -> new GeneralException("Order with id #" + id + " not found"));
+                .orElseThrow(() -> new GeneralException("Order with id #" + id + " not found", HttpStatus.NOT_FOUND));
     }
 
     protected List<SagaStep> getCreateOrderTransactionList(Order order, OrderRequest request) {

@@ -1,0 +1,70 @@
+services:
+  mysql:
+    image: library/mysql:latest
+    volumes:
+      - db:/var/lib/mysql
+      - ./database:/tmp/database
+    command: mysqld --init-file="/tmp/database/init_db.sql" --default-authentication-plugin=mysql_native_password
+    environment:
+      # Password for root access
+      - MYSQL_ROOT_PASSWORD=root
+    networks:
+      - mysql
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+
+  customer-service:
+    image: n0n4m3q/microservices-customer-service:0.0.1-SNAPSHOT
+    ports:
+      - "8180:8180"
+    restart: on-failure
+    depends_on:
+      - mysql
+    networks:
+      - mysql
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  kitchen-service:
+    image: n0n4m3q/microservices-kitchen-service:0.0.1-SNAPSHOT
+    ports:
+      - "8280:8280"
+    restart: on-failure
+    depends_on:
+      - mysql
+    networks:
+      - mysql
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  authorization-service:
+    image: n0n4m3q/microservices-authorization-service:0.0.1-SNAPSHOT
+    ports:
+      - "8380:8380"
+    restart: on-failure
+    networks:
+      - spring
+
+  order-service:
+    image: n0n4m3q/microservices-order-service:0.0.1-SNAPSHOT
+    ports:
+      - "8080:8080"
+    restart: on-failure
+    depends_on:
+      - mysql
+    networks:
+      - mysql
+      - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+networks:
+  mysql:
+    driver: bridge
+  spring:
+    driver: bridge
+volumes:
+  db:

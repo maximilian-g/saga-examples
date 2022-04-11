@@ -16,6 +16,7 @@ import com.maximilian.restaurant.response.kitchen.KitchenTicketResponse;
 import com.maximilian.restaurant.rest.exception.GeneralException;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,7 +107,7 @@ public class KitchenTicketItemService extends BaseLoggableService {
 
     public KitchenTicket getKitchenTicketById(Long id) {
         return kitchenTicketRepository.findById(id)
-                .orElseThrow(() -> new GeneralException("Ticket with id #" + id + " not found"));
+                .orElseThrow(() -> new GeneralException("Ticket with id #" + id + " not found", HttpStatus.NOT_FOUND));
     }
 
     public KitchenTicketResponse rejectKitchenTicketConverted(Long id) {
@@ -127,7 +128,7 @@ public class KitchenTicketItemService extends BaseLoggableService {
 
     public KitchenItem getItemById(Long id) {
         return kitchenItemRepository.findById(id)
-                .orElseThrow(() -> new GeneralException("Item with id #" + id + " not found"));
+                .orElseThrow(() -> new GeneralException("Item with id #" + id + " not found", HttpStatus.NOT_FOUND));
     }
 
     public KitchenItem createItem(KitchenItemRequest request) {
