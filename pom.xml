@@ -12,6 +12,10 @@
     <modules>
         <module>commons</module>
         <module>order-service</module>
+        <module>kitchen-service</module>
+        <module>customer-service</module>
+        <module>authorization-service</module>
+        <module>amqp</module>
     </modules>
 
     <properties>

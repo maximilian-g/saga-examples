@@ -39,6 +39,11 @@
             <version>${commons.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.maximilian.restaurant</groupId>
+            <artifactId>amqp</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <scope>runtime</scope>

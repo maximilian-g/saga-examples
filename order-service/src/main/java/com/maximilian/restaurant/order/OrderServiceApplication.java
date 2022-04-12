@@ -5,7 +5,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @EnableFeignClients(basePackages = "com.maximilian.restaurant.client")
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {
+        "com.maximilian.restaurant.amqp"
+})
 public class OrderServiceApplication {
 
     public static void main(String[] args) {
