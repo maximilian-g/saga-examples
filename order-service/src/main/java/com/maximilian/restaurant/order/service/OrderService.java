@@ -1,5 +1,6 @@
 package com.maximilian.restaurant.order.service;
 
+import com.maximilian.restaurant.amqp.RabbitMQMessageProducer;
 import com.maximilian.restaurant.client.CardAuthorizationClient;
 import com.maximilian.restaurant.client.CustomerClient;
 import com.maximilian.restaurant.client.KitchenClient;
@@ -38,17 +39,19 @@ public class OrderService extends BaseLoggableService {
     private final OrderRepository orderRepository;
     private final Validator validator;
     private final OrderSagaService orderSagaService;
+    private final RabbitMQMessageProducer producer;
 
     private final CustomerClient customerClient;
     private final KitchenClient kitchenClient;
     private final CardAuthorizationClient cardAuthorizationClient;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, Validator validator, OrderSagaService orderSagaService, CustomerClient customerClient, KitchenClient kitchenClient, CardAuthorizationClient cardAuthorizationClient) {
+    public OrderService(OrderRepository orderRepository, Validator validator, OrderSagaService orderSagaService, RabbitMQMessageProducer producer, CustomerClient customerClient, KitchenClient kitchenClient, CardAuthorizationClient cardAuthorizationClient) {
         super(LoggerFactory.getLogger(OrderService.class));
         this.orderRepository = orderRepository;
         this.validator = validator;
         this.orderSagaService = orderSagaService;
+        this.producer = producer;
         this.customerClient = customerClient;
         this.kitchenClient = kitchenClient;
         this.cardAuthorizationClient = cardAuthorizationClient;
@@ -64,6 +67,9 @@ public class OrderService extends BaseLoggableService {
         validate(order, validator);
 
         order = orderRepository.saveAndFlush(order);
+
+        //todo
+
         orderSagaService.performOrderCreationTransaction(getCreateOrderTransactionList(order, request));
         logger.info("Saved order " + order);
 
