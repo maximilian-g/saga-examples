@@ -1,7 +1,10 @@
 package com.maximilian.restaurant.service;
 
+import com.maximilian.restaurant.amqp.RabbitMQMessageProducer;
+import com.maximilian.restaurant.config.CustomerMQConfig;
 import com.maximilian.restaurant.entity.Customer;
 import com.maximilian.restaurant.entity.CustomerStatus;
+import com.maximilian.restaurant.event.OrderCreated;
 import com.maximilian.restaurant.repository.CustomerRepository;
 import com.maximilian.restaurant.request.customer.CustomerRequest;
 import com.maximilian.restaurant.request.customer.UpdateCustomerRequest;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -22,12 +26,16 @@ public class CustomerService extends BaseLoggableService  {
 
     private final CustomerRepository customerRepository;
     private final Validator validator;
+    private final RabbitMQMessageProducer producer;
+    private final CustomerMQConfig customerMQConfig;
 
     @Autowired
-    public CustomerService(CustomerRepository customerRepository, Validator validator) {
+    public CustomerService(CustomerRepository customerRepository, Validator validator, RabbitMQMessageProducer producer, CustomerMQConfig customerMQConfig) {
         super(LoggerFactory.getLogger(CustomerService.class));
         this.customerRepository = customerRepository;
         this.validator = validator;
+        this.producer = producer;
+        this.customerMQConfig = customerMQConfig;
         initCustomer();
     }
 
@@ -58,6 +66,31 @@ public class CustomerService extends BaseLoggableService  {
         customer.setStatus(status);
         customer = customerRepository.save(customer);
         return customer;
+    }
+
+    public void startTransactionForCustomerByEvent(OrderCreated event) {
+        Optional<Customer> customerOptional = customerRepository.getByIdBlocking(event.getCustomerId());
+        customerOptional.ifPresentOrElse(customer -> {
+            if (customer.getCanMakeOrders()) {
+                customer.setStatus(CustomerStatus.IN_TRANSACTION);
+                logger.info("Put customer #" + customer.getId() + " in transaction");
+                // sending event further in queue which indicates that customer is valid
+                producer.publish(event,
+                        customerMQConfig.getInternalExchange(),
+                        customerMQConfig.getInternalCustomerValidRoutingKey());
+            } else {
+                // rejecting order
+                logger.warn("Rejecting order, customer cannot make orders.");
+                producer.publish(event.getOrderId(),
+                        customerMQConfig.getInternalExchange(),
+                        customerMQConfig.getInternalOrderRejectRoutingKey());
+            }
+        }, () -> {
+            logger.warn("Rejecting order, customer with id #" + event.getCustomerId() + " could not be found.");
+            producer.publish(event.getOrderId(),
+                    customerMQConfig.getInternalExchange(),
+                    customerMQConfig.getInternalOrderRejectRoutingKey());
+        });
     }
 
     public Customer updateCustomer(Long id, UpdateCustomerRequest request) {

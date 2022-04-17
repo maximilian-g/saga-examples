@@ -1,5 +1,6 @@
 package com.maximilian.restaurant.order.service;
 
+import com.maximilian.restaurant.event.OrderCreated;
 import com.maximilian.restaurant.order.entity.OrderState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -14,6 +14,15 @@ services:
     ports:
       - "3307:3306"
 
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3.9.11-management-alpine
+    networks:
+      - spring
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   customer-service:
     image: n0n4m3q/microservices-customer-service:0.0.1-SNAPSHOT
     ports:
@@ -21,6 +30,7 @@ services:
     restart: on-failure
     depends_on:
       - mysql
+      - rabbitmq
     networks:
       - mysql
       - spring
@@ -34,6 +44,7 @@ services:
     restart: on-failure
     depends_on:
       - mysql
+      - rabbitmq
     networks:
       - mysql
       - spring
@@ -45,8 +56,12 @@ services:
     ports:
       - "8380:8380"
     restart: on-failure
+    depends_on:
+      - rabbitmq
     networks:
       - spring
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
 
   order-service:
     image: n0n4m3q/microservices-order-service:0.0.1-SNAPSHOT
@@ -55,6 +70,7 @@ services:
     restart: on-failure
     depends_on:
       - mysql
+      - rabbitmq
     networks:
       - mysql
       - spring

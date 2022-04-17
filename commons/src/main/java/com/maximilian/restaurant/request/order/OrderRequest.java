@@ -7,6 +7,7 @@ import com.maximilian.restaurant.data.KitchenItem;
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.List;
 
 public class OrderRequest {
@@ -22,6 +23,16 @@ public class OrderRequest {
     @NotNull(message = "Card details must not be blank")
     @Valid
     private CardDetails cardDetails;
+
+    public OrderRequest() {
+    }
+
+    public OrderRequest(OrderRequest request) {
+        this.customerId = request.customerId;
+        this.items = new ArrayList<>(request.items);
+        this.deliveryPoint = request.deliveryPoint;
+        this.cardDetails = request.cardDetails;
+    }
 
     public Long getCustomerId() {
         return customerId;

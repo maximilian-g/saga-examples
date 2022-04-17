@@ -1,5 +1,7 @@
 package com.maximilian.restaurant.service;
 
+import com.maximilian.restaurant.amqp.RabbitMQMessageProducer;
+import com.maximilian.restaurant.config.KitchenMQConfig;
 import com.maximilian.restaurant.data.Coordinates;
 import com.maximilian.restaurant.data.KitchenItemDetails;
 import com.maximilian.restaurant.entity.KitchenItem;
@@ -7,6 +9,7 @@ import com.maximilian.restaurant.entity.KitchenTicket;
 import com.maximilian.restaurant.entity.KitchenTicketItemLink;
 import com.maximilian.restaurant.entity.KitchenTicketItemPrimaryKey;
 import com.maximilian.restaurant.entity.KitchenTicketStatus;
+import com.maximilian.restaurant.event.OrderCreated;
 import com.maximilian.restaurant.repository.KitchenItemRepository;
 import com.maximilian.restaurant.repository.KitchenTicketItemLinkRepository;
 import com.maximilian.restaurant.repository.KitchenTicketRepository;
@@ -36,14 +39,18 @@ public class KitchenTicketItemService extends BaseLoggableService {
     private final KitchenTicketItemLinkRepository kitchenTicketItemLinkRepository;
     private final KitchenItemRepository kitchenItemRepository;
     private final Validator validator;
+    private final RabbitMQMessageProducer producer;
+    private final KitchenMQConfig kitchenMQConfig;
 
     @Autowired
-    protected KitchenTicketItemService(KitchenTicketRepository kitchenTicketRepository, KitchenTicketItemLinkRepository kitchenTicketItemLinkRepository, KitchenItemRepository kitchenItemRepository, Validator validator) {
+    protected KitchenTicketItemService(KitchenTicketRepository kitchenTicketRepository, KitchenTicketItemLinkRepository kitchenTicketItemLinkRepository, KitchenItemRepository kitchenItemRepository, Validator validator, RabbitMQMessageProducer producer, KitchenMQConfig kitchenMQConfig) {
         super(LoggerFactory.getLogger(KitchenTicketItemService.class));
         this.kitchenTicketRepository = kitchenTicketRepository;
         this.kitchenTicketItemLinkRepository = kitchenTicketItemLinkRepository;
         this.kitchenItemRepository = kitchenItemRepository;
         this.validator = validator;
+        this.producer = producer;
+        this.kitchenMQConfig = kitchenMQConfig;
         initItems();
     }
 
@@ -58,8 +65,21 @@ public class KitchenTicketItemService extends BaseLoggableService {
         return convertToResponse(createKitchenTicket(request));
     }
 
-    public KitchenTicket createKitchenTicket(KitchenTicketRequest request) {
+    public void createKitchenTicket(OrderCreated orderEvent) {
+        KitchenTicketRequest request = new KitchenTicketRequest();
+        request.setOrderId(orderEvent.getOrderId());
+        request.setDeliveryPoint(orderEvent.getDeliveryPoint());
+        request.setItems(orderEvent.getItems());
+        createKitchenTicket(request);
 
+        // sending event further to card auth service queue
+        producer.publish(orderEvent,
+                kitchenMQConfig.getInternalExchange(),
+                kitchenMQConfig.getInternalCardAuthRoutingKey());
+    }
+
+
+    public KitchenTicket createKitchenTicket(KitchenTicketRequest request) {
 
         KitchenTicket ticket = new KitchenTicket();
         ticket.setStatus(KitchenTicketStatus.WAITING_FOR_APPROVAL);
@@ -69,7 +89,7 @@ public class KitchenTicketItemService extends BaseLoggableService {
 
         validate(ticket, validator);
 
-        if(kitchenTicketRepository.existsById(request.getOrderId())) {
+        if (kitchenTicketRepository.existsById(request.getOrderId())) {
             throw new GeneralException("Ticket for this order already exists");
         }
         ticket = kitchenTicketRepository.save(ticket);

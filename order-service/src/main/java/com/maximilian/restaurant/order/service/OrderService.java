@@ -5,6 +5,8 @@ import com.maximilian.restaurant.client.CardAuthorizationClient;
 import com.maximilian.restaurant.client.CustomerClient;
 import com.maximilian.restaurant.client.KitchenClient;
 import com.maximilian.restaurant.data.CardDetails;
+import com.maximilian.restaurant.event.OrderCreated;
+import com.maximilian.restaurant.order.config.OrderMQConfig;
 import com.maximilian.restaurant.order.entity.Order;
 import com.maximilian.restaurant.order.entity.OrderState;
 import com.maximilian.restaurant.order.repository.OrderRepository;
@@ -40,18 +42,20 @@ public class OrderService extends BaseLoggableService {
     private final Validator validator;
     private final OrderSagaService orderSagaService;
     private final RabbitMQMessageProducer producer;
+    private final OrderMQConfig orderMQConfig;
 
     private final CustomerClient customerClient;
     private final KitchenClient kitchenClient;
     private final CardAuthorizationClient cardAuthorizationClient;
 
     @Autowired
-    public OrderService(OrderRepository orderRepository, Validator validator, OrderSagaService orderSagaService, RabbitMQMessageProducer producer, CustomerClient customerClient, KitchenClient kitchenClient, CardAuthorizationClient cardAuthorizationClient) {
+    public OrderService(OrderRepository orderRepository, Validator validator, OrderSagaService orderSagaService, RabbitMQMessageProducer producer, OrderMQConfig orderMQConfig, CustomerClient customerClient, KitchenClient kitchenClient, CardAuthorizationClient cardAuthorizationClient) {
         super(LoggerFactory.getLogger(OrderService.class));
         this.orderRepository = orderRepository;
         this.validator = validator;
         this.orderSagaService = orderSagaService;
         this.producer = producer;
+        this.orderMQConfig = orderMQConfig;
         this.customerClient = customerClient;
         this.kitchenClient = kitchenClient;
         this.cardAuthorizationClient = cardAuthorizationClient;
@@ -68,11 +72,12 @@ public class OrderService extends BaseLoggableService {
 
         order = orderRepository.saveAndFlush(order);
 
-        //todo
+        producer.publish(new OrderCreated(request, order.getId()),
+                orderMQConfig.getInternalExchange(),
+                orderMQConfig.getInternalOrderCreatedRoutingKey());
 
-        orderSagaService.performOrderCreationTransaction(getCreateOrderTransactionList(order, request));
+//        orderSagaService.performOrderCreationTransaction(getCreateOrderTransactionList(order, request));
         logger.info("Saved order " + order);
-
         return new OrderCreatedResponse(order.getId(), order.getOrderState().toString());
     }
 
