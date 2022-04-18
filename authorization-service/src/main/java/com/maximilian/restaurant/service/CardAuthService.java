@@ -3,6 +3,7 @@ package com.maximilian.restaurant.service;
 import com.maximilian.restaurant.amqp.RabbitMQMessageProducer;
 import com.maximilian.restaurant.config.CardAuthMQConfig;
 import com.maximilian.restaurant.data.CardDetails;
+import com.maximilian.restaurant.event.EntityWithDescriptionEvent;
 import com.maximilian.restaurant.event.OrderCreated;
 import com.maximilian.restaurant.rest.RestResponse;
 import org.slf4j.Logger;
@@ -30,13 +31,13 @@ public class CardAuthService {
             // approving
             sendPayloadToInternalExchange(event.getOrderId(),
                     cardAuthMQConfig.getInternalTicketApproveRoutingKey());
-            sendPayloadToInternalExchange(event.getOrderId(),
+            sendPayloadToInternalExchange(getEvent(event.getOrderId(), response.getMessage()),
                     cardAuthMQConfig.getInternalOrderApproveRoutingKey());
         } else {
             // rejecting
             sendPayloadToInternalExchange(event.getOrderId(),
                     cardAuthMQConfig.getInternalTicketRejectRoutingKey());
-            sendPayloadToInternalExchange(event.getOrderId(),
+            sendPayloadToInternalExchange(getEvent(event.getOrderId(), response.getMessage()),
                     cardAuthMQConfig.getInternalOrderRejectRoutingKey());
         }
         // ending transaction for customer
@@ -55,12 +56,19 @@ public class CardAuthService {
         restResponse.setSuccess(Double.compare(Math.random(), 0.5) > 0);
         if(restResponse.isSuccess()) {
             logger.info("Authorization successful");
-            restResponse.setMessage("Authorized card ending with *" + details.getCardNumber().substring(details.getCardNumber().length() - 4));
+            restResponse.setMessage("Authorized payment from card ending with *" + details.getCardNumber().substring(details.getCardNumber().length() - 4));
         } else {
             logger.info("Authorization failed");
             restResponse.setMessage("Failed to authorize card ending with *" + details.getCardNumber().substring(details.getCardNumber().length() - 4));
         }
         return restResponse;
+    }
+
+    private EntityWithDescriptionEvent getEvent(Long entityId, String description) {
+        EntityWithDescriptionEvent event = new EntityWithDescriptionEvent();
+        event.setEntityId(entityId);
+        event.setDescription(description);
+        return event;
     }
 
     private void sendPayloadToInternalExchange(Object payload, String routingKey) {

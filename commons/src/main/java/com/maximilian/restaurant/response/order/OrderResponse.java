@@ -7,6 +7,7 @@ public class OrderResponse {
 
     private Long orderId;
     private String status;
+    private String description;
     private KitchenTicketResponse ticket;
     private CustomerResponse customer;
 
@@ -40,5 +41,13 @@ public class OrderResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }

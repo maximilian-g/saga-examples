@@ -1,6 +1,6 @@
 package com.maximilian.restaurant.order.service;
 
-import com.maximilian.restaurant.event.OrderCreated;
+import com.maximilian.restaurant.event.EntityWithDescriptionEvent;
 import com.maximilian.restaurant.order.entity.OrderState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,15 +20,15 @@ public class OrderMessageConsumer {
     }
 
     @RabbitListener(queues = "${rabbitmq.queue.order.approved}")
-    public void consumeApprove(Long orderId) {
-        logger.info("Consumed APPROVE message from queue for id " + orderId);
-        orderService.setOrderState(orderId, OrderState.APPROVED);
+    public void consumeApprove(EntityWithDescriptionEvent orderEvent) {
+        logger.info("Consumed APPROVE message from queue for id " + orderEvent.getEntityId());
+        orderService.setOrderState(orderEvent.getEntityId(), OrderState.APPROVED, "Approved. " + orderEvent.getDescription());
     }
 
     @RabbitListener(queues = "${rabbitmq.queue.order.rejected}")
-    public void consumeReject(Long orderId) {
-        logger.info("Consumed REJECT message from queue for id " + orderId);
-        orderService.setOrderState(orderId, OrderState.REJECTED);
+    public void consumeReject(EntityWithDescriptionEvent orderEvent) {
+        logger.info("Consumed REJECT message from queue for id " + orderEvent.getEntityId());
+        orderService.setOrderState(orderEvent.getEntityId(), OrderState.REJECTED, "Rejected. " + orderEvent.getDescription());
     }
 
 }

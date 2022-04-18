@@ -1,6 +1,5 @@
 package com.maximilian.restaurant.rest;
 
-import com.maximilian.restaurant.entity.CustomerStatus;
 import com.maximilian.restaurant.request.customer.CustomerRequest;
 import com.maximilian.restaurant.request.customer.UpdateCustomerRequest;
 import com.maximilian.restaurant.response.customer.CustomerResponse;
@@ -32,19 +31,9 @@ public class CustomerRestController {
         this.customerService = customerService;
     }
 
-    @PutMapping("/{id}/start_transaction")
-    public ResponseEntity<CustomerResponse> getCustomerAndBlockUpdate(@PathVariable Long id) {
-        return ResponseEntity.ok(customerService.changeStatus(id, CustomerStatus.IN_TRANSACTION).toResponse());
-    }
-
-    @PutMapping("/{id}/end_transaction")
-    public ResponseEntity<CustomerResponse> getCustomerAndUnblockUpdate(@PathVariable Long id) {
-        return ResponseEntity.ok(customerService.changeStatus(id, CustomerStatus.READY_FOR_UPDATE).toResponse());
-    }
-
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponse> disableOrderCreationPossibility(@PathVariable Long id,
-                                                                            @RequestBody @Valid UpdateCustomerRequest request) {
+    public ResponseEntity<CustomerResponse> changeOrderCreationPossibility(@PathVariable Long id,
+                                                                           @RequestBody @Valid UpdateCustomerRequest request) {
         return ResponseEntity.ok(customerService.updateCustomer(id, request).toResponse());
     }
 

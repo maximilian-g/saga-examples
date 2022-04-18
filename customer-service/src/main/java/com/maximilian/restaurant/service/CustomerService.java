@@ -22,7 +22,7 @@ import java.util.Set;
 
 @Service
 @Transactional
-public class CustomerService extends BaseLoggableService  {
+public class CustomerService extends BaseLoggableService {
 
     private final CustomerRepository customerRepository;
     private final Validator validator;
@@ -61,18 +61,12 @@ public class CustomerService extends BaseLoggableService  {
                 .orElseThrow(() -> new GeneralException("Customer with id #" + id + " not found", HttpStatus.NOT_FOUND));
     }
 
-    public Customer changeStatus(Long id, CustomerStatus status) {
-        Customer customer = getByIdBlocking(id);
-        customer.setStatus(status);
-        customer = customerRepository.save(customer);
-        return customer;
-    }
-
     public void startTransactionForCustomerByEvent(OrderCreated event) {
         Optional<Customer> customerOptional = customerRepository.getByIdBlocking(event.getCustomerId());
         customerOptional.ifPresentOrElse(customer -> {
             if (customer.getCanMakeOrders()) {
                 customer.setStatus(CustomerStatus.IN_TRANSACTION);
+                customerRepository.save(customer);
                 logger.info("Put customer #" + customer.getId() + " in transaction");
                 // sending event further in queue which indicates that customer is valid
                 producer.publish(event,
@@ -95,7 +89,7 @@ public class CustomerService extends BaseLoggableService  {
 
     public Customer updateCustomer(Long id, UpdateCustomerRequest request) {
         Customer customer = getByIdBlocking(id);
-        if(customer.getStatus() == CustomerStatus.IN_TRANSACTION) {
+        if (customer.getStatus() == CustomerStatus.IN_TRANSACTION) {
             throw new GeneralException("Customer #" + id + " temporary cannot be updated");
         }
         customer.setCanMakeOrders(request.getCanMakeOrders());

@@ -36,6 +36,10 @@ public class Order {
     @Column
     private OrderState orderState;
 
+    @Column
+    @NotNull(message = "Order description cannot be blank")
+    private String description;
+
     public Long getId() {
         return id;
     }
@@ -68,6 +72,14 @@ public class Order {
         this.orderState = orderState;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     @Override
     public String toString() {
         return "Order{" +
@@ -75,6 +87,7 @@ public class Order {
                 ", customerId=" + customerId +
                 ", createdAt=" + createdAt +
                 ", orderState=" + orderState +
+                ", description='" + description + '\'' +
                 '}';
     }
 }
