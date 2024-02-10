@@ -1,6 +1,8 @@
 Project is created as demo implementation of some microservices in domain area "Restaurant".
 <br>
-Something like "Saga" pattern is implemented.(not using AMQP for now)
+"Saga" pattern (with Orchestration technique) is implemented using simple HTTP requests.
+Order service class (https://github.com/maximilian-g/saga-examples/blob/master/order-service/src/main/java/com/maximilian/restaurant/order/service/OrderService.java)
+Order service is an Orchestrator in this scenario.
 
 This project was created to practice usage of
 Spring, parts of Spring Cloud, Open Feign, and microservices concept in general.
@@ -17,7 +19,7 @@ Main possibility of this demo is create order, call hierarchy will look like:
     4 - POST -> kitchen-service.approveTicket()
     5 - POST -> customer-service.changeStatusToReadyForUpdate()
     6 - POST -> order-service.approveOrder()
-If any action before "Final" action will fail, compensating action will be performed for every occurred action.
+If any action before "Final" action will fail, compensating action will be performed for every occurred action to make our state consistent.
 
-Docker images and docker compose file to be implemented.
+Docker images and docker compose files are provided.
 
